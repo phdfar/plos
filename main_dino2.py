@@ -151,20 +151,20 @@ def train_dino(args):
         exx_data = pickle.load(fp)
     
         # List of folders to exclude
-    exclude_folders=set()
+    include_folders=set()
     for exx in exx_data:  
-        exclude_folders.add(exx)
+        include_folders.add(exx)
         
-    # Filter out the excluded folders
+    # Filter to include only the specified folders
     filtered_samples = [
         (path, class_idx) for path, class_idx in dataset.samples
-        if os.path.basename(os.path.dirname(path)) not in exclude_folders
+        if os.path.basename(os.path.dirname(path)) in include_folders
     ]
 
     # Update the dataset samples
     dataset.samples = filtered_samples
 
-    # If you need to update the targets (class labels) as well
+    # Update the dataset targets (class labels) as well
     dataset.targets = [class_idx for _, class_idx in filtered_samples]
 
 
