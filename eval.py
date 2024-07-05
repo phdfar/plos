@@ -7,6 +7,47 @@ from tqdm import tqdm
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
+def remove_small_area(image):
+    contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    contour_areas = [cv2.contourArea(contour) for contour in contours]
+
+    # Find the index of the contour with the largest area
+    largest_contour_index = np.argmax(contour_areas)
+
+    # Get the area of the largest contour
+    largest_contour_area = contour_areas[largest_contour_index]
+    
+    try:
+        # Calculate the ratio of each contour area to the area of the largest contour
+        area_ratios = [area / largest_contour_area for area in contour_areas]
+
+        # Create an empty image of the same size as the input image
+        refined_image = np.zeros_like(image)
+
+        # Iterate through the contours and their corresponding area ratios
+        for contour, ratio in zip(contours, area_ratios):
+            # If the ratio is greater than or equal to 0.1, draw the contour on the refined image
+            if ratio >= 0.1:
+                cv2.drawContours(refined_image, [contour], -1, 1, thickness=cv2.FILLED)
+
+        return refined_image
+    except:
+        return image
+    
+def invert(image):
+    h,w = image.shape
+    border = [image[:5,:].ravel(), image[:,:5].ravel(), image[h-5:,:].ravel(), image[:,w-5:].ravel()]
+    flag=0;
+    for b in border:
+        tp = np.where(b==1)[0]
+        if len(tp)/len(b)>0.9:
+            flag+=1;
+    if flag>=2:
+        return 1-image
+    else:
+        return image
+    
 def calculate_iou(mask1, mask2):
    
     mask1_bool = mask1.astype(bool)
@@ -81,16 +122,33 @@ def instance(pred_root,gt_root):
     preds_path = np.sort(glob.glob(pred_root+'*.png'))
     q=0;m_iouT=0;
     
+    scr={}
     for path in tqdm(preds_path):
         name = path.split('/')[-1]
         gt_mask=gts_masks[name]
         pred_mask = pred_masks[name]
+        h,w = pred_mask[0].shape
+
+        #print('pred_root')
+        
+        
+        #if len(gt_mask)<=3:
+        #    continue
+            
+        #if h*w<1500:
+        #    continue
         
         miou = calculate_instance_segmentation_accuracy(gt_mask, pred_mask)
         m_iouT = m_iouT + miou; 
+        scr.update({name:[miou,pred_mask,gt_mask]})
         q+=1;
     
     print('mIOU is '+str(m_iouT/q))
+    
+    import pickle
+    with open(pred_root.replace('/','')+'.obj', 'wb') as fp:
+        pickle.dump(scr, fp)
+    
     return m_iouT/q
 
 def calculate_metrics(ground_truth, predicted_segmentation):
