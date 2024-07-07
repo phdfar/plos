@@ -328,7 +328,10 @@ def train_dino(args):
 
     start_time = time.time()
     print("Starting DINO training !")
-    
+
+    print('############## AFTER AFTER ###########\n')
+    print_params(student)
+
     for epoch in range(start_epoch, args.epochs):
         data_loader.sampler.set_epoch(epoch)
 
