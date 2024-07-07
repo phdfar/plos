@@ -332,13 +332,13 @@ def train_dino(args):
     print_params(student)
 
     for name, param in student.named_parameters():
-        if 'backbone' in name:
+        if 'head' in name:
             param.requires_grad = False
         
     print('############## AFTER ###########\n')
     print_params(student)
 
-    student = DDP(student, device_ids=[args.local_rank], find_unused_parameters=True)
+    #student = DDP(student, device_ids=[args.local_rank], find_unused_parameters=True)
 
     
     for epoch in range(start_epoch, args.epochs):
