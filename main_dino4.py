@@ -313,8 +313,12 @@ def train_dino(args):
     import torch.distributed as dist
     from torch.nn.parallel import DistributedDataParallel as DDP
     
-    # Initialize the process group
-    dist.init_process_group(backend='nccl')
+    def init_distributed_mode():
+        if not dist.is_initialized():
+            dist.init_process_group(backend='nccl')
+        else:
+            print("Process group already initialized.")
+
 
     def print_params(model):
         trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -327,14 +331,15 @@ def train_dino(args):
     print('###########################\n')
     print_params(student)
 
-    student = DDP(student, find_unused_parameters=True)
-
     for name, param in student.named_parameters():
         if 'backbone' in name:
             param.requires_grad = False
         
     print('############## AFTER ###########\n')
     print_params(student)
+
+    model = DDP(model, device_ids=[args.local_rank], find_unused_parameters=True)
+
     
     for epoch in range(start_epoch, args.epochs):
         data_loader.sampler.set_epoch(epoch)
