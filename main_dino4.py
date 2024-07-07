@@ -310,10 +310,11 @@ def train_dino(args):
     start_time = time.time()
     print("Starting DINO training !")
 
+    import torch.distributed as dist
     from torch.nn.parallel import DistributedDataParallel as DDP
-
+    
     # Initialize the process group
-  #  dist.init_process_group(backend='nccl')
+    dist.init_process_group(backend='nccl')
 
     def print_params(model):
         trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
