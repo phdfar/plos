@@ -338,7 +338,7 @@ def train_dino(args):
     print('############## AFTER ###########\n')
     print_params(student)
 
-    model = DDP(model, device_ids=[args.local_rank], find_unused_parameters=True)
+    student = DDP(student, device_ids=[args.local_rank], find_unused_parameters=True)
 
     
     for epoch in range(start_epoch, args.epochs):
