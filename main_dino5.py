@@ -308,7 +308,8 @@ def train_dino(args):
     start_epoch = to_restore["epoch"]
 
     start_time = time.time()
-    
+
+    '''
     def print_params(model):
         trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         non_trainable_params = sum(p.numel() for p in model.parameters() if not p.requires_grad)
@@ -326,7 +327,7 @@ def train_dino(args):
         
     print('############## AFTER ###########\n')
     print_params(student)
-    
+    '''
     print("Starting DINO training !")
     for epoch in range(start_epoch, args.epochs):
         data_loader.sampler.set_epoch(epoch)
