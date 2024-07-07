@@ -309,7 +309,12 @@ def train_dino(args):
 
     start_time = time.time()
     print("Starting DINO training !")
-    
+
+    from torch.nn.parallel import DistributedDataParallel as DDP
+
+    # Initialize the process group
+    dist.init_process_group(backend='nccl')
+
     def print_params(model):
         trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         non_trainable_params = sum(p.numel() for p in model.parameters() if not p.requires_grad)
@@ -320,6 +325,8 @@ def train_dino(args):
     print_params(teacher)
     print('###########################\n')
     print_params(student)
+
+    student = DDP(student, find_unused_parameters=True)
 
     for name, param in student.named_parameters():
         if 'backbone' in name:
