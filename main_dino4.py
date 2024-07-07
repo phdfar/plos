@@ -246,6 +246,25 @@ def train_dino(args):
     else:
         # teacher_without_ddp and teacher are the same thing
         teacher_without_ddp = teacher
+
+    def print_params(model):
+        trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        non_trainable_params = sum(p.numel() for p in model.parameters() if not p.requires_grad)
+
+        print("Trainable parameters:", trainable_params)
+        print("Non-trainable parameters:", non_trainable_params)
+
+    print_params(teacher)
+    print('###########################\n')
+    print_params(student)
+
+    for name, param in student.named_parameters():
+        if 'backbone' in name:
+            param.requires_grad = False
+        
+    print('############## AFTER ###########\n')
+    print_params(student)
+    
     student = nn.parallel.DistributedDataParallel(student, device_ids=[args.gpu])
     # teacher and student start with the same weights
     teacher_without_ddp.load_state_dict(student.module.state_dict())
@@ -309,37 +328,6 @@ def train_dino(args):
 
     start_time = time.time()
     print("Starting DINO training !")
-
-    import torch.distributed as dist
-    from torch.nn.parallel import DistributedDataParallel as DDP
-    
-    def init_distributed_mode():
-        if not dist.is_initialized():
-            dist.init_process_group(backend='nccl')
-        else:
-            print("Process group already initialized.")
-
-
-    def print_params(model):
-        trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-        non_trainable_params = sum(p.numel() for p in model.parameters() if not p.requires_grad)
-
-        print("Trainable parameters:", trainable_params)
-        print("Non-trainable parameters:", non_trainable_params)
-
-    print_params(teacher)
-    print('###########################\n')
-    print_params(student)
-
-    for name, param in student.named_parameters():
-        if 'head' in name:
-            param.requires_grad = False
-        
-    print('############## AFTER ###########\n')
-    print_params(student)
-
-    #student = DDP(student, device_ids=[args.local_rank], find_unused_parameters=True)
-
     
     for epoch in range(start_epoch, args.epochs):
         data_loader.sampler.set_epoch(epoch)
