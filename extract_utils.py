@@ -220,6 +220,16 @@ def rw_affinity(image, sigma=0.033, radius=1):
     return W
 
 
+
+
+def get_diagonalnp(W, threshold: float = 1e-12):
+    """Gets the diagonal sum of a sparse matrix"""
+    D = np.sum(W, axis=1)
+    D[D < threshold] = 1.0  # Prevent division by zero.
+    D_matrix = np.diag(D)
+    return D_matrix
+    
+
 def get_diagonal(W: scipy.sparse.csr_matrix, threshold: float = 1e-12):
     """Gets the diagonal sum of a sparse matrix"""
     try:
