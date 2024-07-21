@@ -74,7 +74,7 @@ class Landaloss(nn.Module):
 
           #D_comb = np.array(utils.get_diagonal(W_feat).todense())  # Check if dense or sparse is faster
           #D_comb = np.array(utils.get_diagonal(W_feat).toarray())  # Use toarray() instead of todense()
-          D_comb = utils.get_diagonalnp(torch.tensor(W_feat))
+          D_comb = utils.get_diagonalnnp(torch.tensor(W_feat))
             
           try:
               eigenvalues, eigenvectors = eigsh(D_comb - W_feat, k=K, sigma=0, which='LM', M=D_comb)
