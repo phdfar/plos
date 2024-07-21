@@ -12,7 +12,7 @@ from skimage.morphology import binary_dilation, binary_erosion
 from torch.utils.data import Dataset
 from torchvision import transforms
 from tqdm import tqdm
-
+import numpy as np
 
 class ImagesDataset(Dataset):
     """A very simple dataset for loading images."""
