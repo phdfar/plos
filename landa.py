@@ -72,7 +72,9 @@ class Landaloss(nn.Module):
           W_feat = W_feat / W_feat.max()  # NOTE: If features are normalized, this naturally does nothing
           W_feat = W_feat.detach().cpu().numpy()
 
-          D_comb = np.array(utils.get_diagonal(W_feat).todense())  # Check if dense or sparse is faster
+          #D_comb = np.array(utils.get_diagonal(W_feat).todense())  # Check if dense or sparse is faster
+          D_comb = np.array(get_diagonal(W_feat).toarray())  # Use toarray() instead of todense()
+
 
           try:
               eigenvalues, eigenvectors = eigsh(D_comb - W_feat, k=K, sigma=0, which='LM', M=D_comb)
