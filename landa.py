@@ -98,4 +98,4 @@ class Landaloss(nn.Module):
       loss = loss +  F.mse_loss(lan1, lan3)
       loss = loss +  F.mse_loss(lan2, lan3)
 
-      return loss;
+      return loss*5;
