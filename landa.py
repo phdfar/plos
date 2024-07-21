@@ -73,7 +73,7 @@ class Landaloss(nn.Module):
           W_feat = W_feat.detach().cpu().numpy()
 
           #D_comb = np.array(utils.get_diagonal(W_feat).todense())  # Check if dense or sparse is faster
-          D_comb = np.array(get_diagonal(W_feat).toarray())  # Use toarray() instead of todense()
+          D_comb = np.array(utils.get_diagonal(W_feat).toarray())  # Use toarray() instead of todense()
 
 
           try:
