@@ -20,10 +20,6 @@ from .utils.memory import retry_if_cuda_oom
 from skimage import color
 import cv2
 import numpy as np
-import pickle
-import torch.nn.functional as F
-import sil
-import bil
 
 def unfold_wo_center(x, kernel_size, dilation):
     assert x.dim() == 4
@@ -113,7 +109,6 @@ def get_neighbor_images_patch_color_similarity(images, images_neighbor, kernel_s
 
 logger = logging.getLogger(__name__)
 
-import copy
 
 @META_ARCH_REGISTRY.register()
 class VideoMaskFormer(nn.Module):
@@ -180,64 +175,8 @@ class VideoMaskFormer(nn.Module):
         self.register_buffer("pixel_std", torch.Tensor(pixel_std).view(-1, 1, 1), False)
 
         self.num_frames = num_frames
-        
-        #self.SilhouetteLoss = sil.SilhouetteLoss()
-        self.DavisBouldinLoss = bil.DavisBouldinLoss()
         #self.structure_fc = nn.Conv2d(27, 256, 1)
-        
-        '''
-        
-        self.sem_seg_head0 = copy.deepcopy(sem_seg_head)
-        self.sem_seg_head1 = copy.deepcopy(sem_seg_head)
-        self.sem_seg_head2 = copy.deepcopy(sem_seg_head)
-        self.sem_seg_head3 = copy.deepcopy(sem_seg_head)
-        self.sem_seg_head4 = copy.deepcopy(sem_seg_head)
 
-        self.sem_seg_head0.load_state_dict(torch.load('/home/user01/MaskFreeVIS/model_final0.pth')['model'],strict=False)
-        self.sem_seg_head1.load_state_dict(torch.load('/home/user01/MaskFreeVIS/model_final1.pth')['model'],strict=False)
-        self.sem_seg_head2.load_state_dict(torch.load('/home/user01/MaskFreeVIS/model_final2.pth')['model'],strict=False)
-        self.sem_seg_head3.load_state_dict(torch.load('/home/user01/MaskFreeVIS/model_final3.pth')['model'],strict=False)
-        self.sem_seg_head4.load_state_dict(torch.load('/home/user01/MaskFreeVIS/model_final4.pth')['model'],strict=False)
-
-        
-        for name, param in self.sem_seg_head0.named_parameters():
-            if 'backbone' not in name:
-                break
-         
-        for name, param1 in self.sem_seg_head1.named_parameters():
-            if 'backbone' not in name:
-                break
-                
-        print('param xxxxxxx ',name,torch.equal(param, param1))  
-            
-        print(asd)
-        print('LOOOOOOOOOOOOOOOOOOOOODED HEAD')
-        '''
-        '''
-        # Load the state dictionary
-        state_dict = torch.load('/home/user01/MaskFreeVIS/model_final0.pth')['model']
-
-        # Load the state dictionary into the model
-        load_info = self.sem_seg_head0.load_state_dict(state_dict, strict=False)
-
-        # Calculate the number of matched keys
-        matched_keys = len(state_dict) - len(load_info.missing_keys) - len(load_info.unexpected_keys)
-
-        # Print the results
-        print(f"Number of keys in the state dictionary: {len(state_dict)}")
-        print(f"Number of matched keys: {matched_keys}")
-        print(f"Missing keys: {load_info.missing_keys}")
-        print(f"Unexpected keys: {load_info.unexpected_keys}")
-
-
-        with open('/home/user01/MaskFreeVIS/oversplit_moment_valid_5.obj', 'rb') as fp:
-            self.foldersz_valid = pickle.load(fp)
-            
-        print(asd)
-        '''
-        
-
-        
     @classmethod
     def from_config(cls, cfg):
         backbone = build_backbone(cfg)
@@ -328,220 +267,46 @@ class VideoMaskFormer(nn.Module):
                         Each dict contains keys "id", "category_id", "isthing".
         """
         images = []
-        zfilename = []
+        
         for video in batched_inputs:
             for frame in video["image"]:
                 images.append(frame.to(self.device))
-            for frame in video["file_names"]:
-                zfilename.append(frame)
 
-        #print('zfilename @@@@@@ ',zfilename)
-        
         is_coco = (len(images) == 8) or (len(images) == 4)# change here, 4 is for swinl with bs 1 which cannot afford batch size 2
-        
-        #print('len(images) >>> ', len(images))
-        #print('is_coco     >>> ', is_coco)
-        
         if self.training and not is_coco:
             k_size = 3 
             rs_images = ImageList.from_tensors(images, self.size_divisibility)
-            
-            B,C,H,W = rs_images.tensor.size()
-            
-            if H*W>=424200:
-                downsampled_images = F.avg_pool2d(F.interpolate(rs_images.tensor.float(), size=(480, 864), mode='bilinear', align_corners=False), kernel_size=4, stride=4, padding=0) #for img in images]
-                
-            else:
-                downsampled_images = F.avg_pool2d(rs_images.tensor.float(), kernel_size=4, stride=4, padding=0) #for img in images]
+            downsampled_images = F.avg_pool2d(rs_images.tensor.float(), kernel_size=4, stride=4, padding=0) #for img in images]
             images_lab = [torch.as_tensor(color.rgb2lab(ds_image[[2, 1, 0]].byte().permute(1, 2, 0).cpu().numpy()), device=ds_image.device, dtype=torch.float32).permute(2, 0, 1) for ds_image in downsampled_images]
             images_lab_sim = [get_images_color_similarity(img_lab.unsqueeze(0), k_size, 2) for img_lab in images_lab] # ori is 0.3, 0.5, 0.7
-            
-            #print('len(images_lab)>>> ', len(images_lab))
-            
-            #for ii in range(0, len(images_lab), 3):
-            #    print('>>>>\n ',ii,images_lab[ii].unsqueeze(0).size(),images_lab[ii+1].unsqueeze(0).size())
-            #    break
-
-            images_lab_sim_nei = [get_neighbor_images_patch_color_similarity(images_lab[ii].unsqueeze(0), images_lab[ii+1].unsqueeze(0), 3, 3) for ii in range(0, len(images_lab)-2, 3)] # change k form 3 to 5, ori is 3, ori dilation is 3
-            images_lab_sim_nei1 = [get_neighbor_images_patch_color_similarity(images_lab[ii].unsqueeze(0), images_lab[ii+2].unsqueeze(0), 3, 3) for ii in range(0, len(images_lab)-2, 3)]
-            images_lab_sim_nei2 = [get_neighbor_images_patch_color_similarity(images_lab[ii+1].unsqueeze(0), images_lab[ii+2].unsqueeze(0), 3, 3) for ii in range(0, len(images_lab)-2, 3)]
+            images_lab_sim_nei = [get_neighbor_images_patch_color_similarity(images_lab[ii].unsqueeze(0), images_lab[ii+1].unsqueeze(0), 3, 3) for ii in range(0, len(images_lab), 3)] # change k form 3 to 5, ori is 3, ori dilation is 3
+            images_lab_sim_nei1 = [get_neighbor_images_patch_color_similarity(images_lab[ii].unsqueeze(0), images_lab[ii+2].unsqueeze(0), 3, 3) for ii in range(0, len(images_lab), 3)]
+            images_lab_sim_nei2 = [get_neighbor_images_patch_color_similarity(images_lab[ii+1].unsqueeze(0), images_lab[ii+2].unsqueeze(0), 3, 3) for ii in range(0, len(images_lab), 3)]
 
             
 
         images = [(x - self.pixel_mean) / self.pixel_std for x in images]
         images = ImageList.from_tensors(images, self.size_divisibility)
 
-        #print('self.size_divisibility',self.size_divisibility)
-        
-        
-
-        B,C,H,W = images.tensor.size()
-        
-        #print('B,C,H,W',B,C,H,W)
-        
-        tz=0;
-
-        if self.training:
-            if H*W>=424200:
-                features = self.backbone(F.interpolate(images.tensor, size=(480, 864), mode='bilinear', align_corners=False))
-                H=480;W=864
-                tz = 1;
-        
-        #B,C,H,W = images.tensor.size()
-        #print('B,C,H,W',B,C,H,W,tz)
-        
-        if tz==0:
-            features = self.backbone(images.tensor)
-        
-        ################################################################# OPTICAL ###################################################
-
-        '''
-        tmps=[];
-
-        flagz=True;
-        
-        if self.training and not is_coco:
-            for name in zfilename:
-                tmps.append(cv2.resize(cv2.imread(name.replace('train/JPEGImages','train_optical').replace('.jpg','.png')), (W,H), interpolation=cv2.INTER_NEAREST))
-                flagz=False
-          
-        if self.training==False:
-            for name in zfilename:
-                tmps.append(cv2.resize(cv2.imread(name.replace('valid/JPEGImages','valid_optical').replace('.jpg','.png')), (W,H), interpolation=cv2.INTER_NEAREST))
-                flagz=False
-
-        if flagz==False:
-            tmps = torch.tensor(np.asarray(tmps).astype('float32')).permute(0,3,1,2).cuda()
-
-            #print('tmps $$$$$$$$$$  ',tmps.size())
-            featuresopt = self.backbone(tmps)
-            for key in features.keys():
-                features[key] = features[key] + featuresopt[key]
-        '''
-        ################################################################# OPTICAL ###################################################
-
-        '''
-        if self.training==False: 
-            
-        
-            gkey = self.foldersz_valid[zfilename[0].split('/')[-2]]
-            
-            #print(gkey,zfilename[0].split('/')[-2])
-
-            if gkey==0:
-                self.sem_seg_head0.load_state_dict(torch.load('/home/user01/MaskFreeVIS/model_final0.pth')['model'],strict=False)
-                outputs = self.sem_seg_head0(features)
-            elif gkey==1:
-                self.sem_seg_head1.load_state_dict(torch.load('/home/user01/MaskFreeVIS/model_final1.pth')['model'],strict=False)
-                outputs = self.sem_seg_head1(features)
-            elif gkey==2:
-                self.sem_seg_head2.load_state_dict(torch.load('/home/user01/MaskFreeVIS/model_final2.pth')['model'],strict=False)
-                outputs = self.sem_seg_head2(features)
-            elif gkey==3:
-                self.sem_seg_head3.load_state_dict(torch.load('/home/user01/MaskFreeVIS/model_final3.pth')['model'],strict=False)
-                outputs = self.sem_seg_head3(features)
-            elif gkey==4:
-                self.sem_seg_head4.load_state_dict(torch.load('/home/user01/MaskFreeVIS/model_final4.pth')['model'],strict=False)
-                outputs = self.sem_seg_head4(features)
-        
-        
-        self.sem_seg_head0.load_state_dict(torch.load('/home/user01/MaskFreeVIS/model_final0.pth')['model'],strict=False)
-        outputs1 = self.sem_seg_head0(features)
-        
-        self.sem_seg_head1.load_state_dict(torch.load('/home/user01/MaskFreeVIS/model_final1.pth')['model'],strict=False)
-        outputs2 = self.sem_seg_head1(features)
-        
-        are_equal = torch.equal(outputs1['pred_masks'], outputs2['pred_masks'])
-        print(f"Tensors are exactly equal: {are_equal}")
-
-        print(asd)
-        
-        #outputs = self.sem_seg_head(features)
-        
-        #print('len(images) >>> ', len(images))
-        
-        
-        #for key in features.keys():
-        #    print(key,features[key].size())
-        
-        '''
-        
+        features = self.backbone(images.tensor)
         outputs = self.sem_seg_head(features)
-        
-        '''
-        for key in outputs.keys():
-            if type(outputs[key])!=list:
-                print(key,outputs[key].size())
-            else:
-                print(key,' LIST')
-                for h in outputs[key]:
-                    if type(h)!=dict:
-                        print(h.size())
-                    else:
-                        for w in h.keys():
-                            print(w,h[w].size())
-        #print(asd)
-        
-        '''
+
         if self.training:
             # mask classification target
             targets = self.prepare_targets(batched_inputs, images, is_coco)
-            
-            if tz==1:
-                for gkey in targets:
-                    for key in gkey.keys():
-                        #print(key,gkey[key].size())
-                        if key == 'masks':
-                            gkey[key] = F.interpolate(gkey[key], size=(H, W), mode='nearest')
-          
-            '''
-            for gkey in targets:
-                for key in gkey.keys():
-                    print(key,gkey[key].size())
-
-            print('###############')
-            
-            '''
             if not is_coco:
                 # bipartite matching-based loss
                 losses = self.criterion(outputs, targets, images_lab_sim, images_lab_sim_nei, images_lab_sim_nei1, images_lab_sim_nei2)
-                
-                #import pickle
-                #with open('zzz.obj', 'wb') as fp:
-                #    pickle.dump([images,images_lab,features,outputs,targets,images_lab_sim, images_lab_sim_nei, images_lab_sim_nei1, images_lab_sim_nei2], fp)
-                #print(asd)
-                
             else:
                 losses = self.criterion(outputs, targets, None, None, None, None)
 
-            ############################## SIL ##############################
-            KK=[];
-            for gkey in targets:
-                #print('gkey ',gkey['labels'])
-                KK.append(gkey['labels'].size()[0])
-                
-            #print('KK >>> ',KK)
-            #loss_sil =self.SilhouetteLoss(outputs['pred_masks'],KK)
-            loss_sil =self.DavisBouldinLoss(outputs['pred_masks'],KK)
-            
-                
-            #print('loss_sil >>> ',loss_sil)
-            #for key in losses:
-            #    print(key,losses[key])
-                
-            #losses['loss_mask'] = losses['loss_mask'] + loss_sil
-            
             for k in list(losses.keys()):
                 if k in self.criterion.weight_dict:
-                    losses[k] *= self.criterion.weight_dict[k] * loss_sil
+                    losses[k] *= self.criterion.weight_dict[k]
                 else:
                     # remove this loss if not specified in `weight_dict`
-                    print('POOOOOOOOOOOOOOP',k)
                     losses.pop(k)
             return losses
-        
-        ############################## SIL ##############################
-
         else:
             mask_cls_results = outputs["pred_logits"]
             mask_pred_results = outputs["pred_masks"]
@@ -575,7 +340,6 @@ class VideoMaskFormer(nn.Module):
             else:
                 mask_shape = [_num_instance, self.num_frames, h_pad, w_pad]
 
-            #print('mask_shape>>>> ',mask_shape,self.num_frames)
             gt_masks_per_video = torch.zeros(mask_shape, dtype=torch.bool, device=self.device)
             gt_classes_per_video = targets_per_video["instances"][0].gt_classes.to(self.device)
 
@@ -590,8 +354,6 @@ class VideoMaskFormer(nn.Module):
                 if isinstance(targets_per_frame.gt_masks, BitMasks):
                     gt_masks_per_video[:, f_i, :h, :w] = targets_per_frame.gt_masks.tensor
                 else: #polygon
-                    #print('>>>>>>>>>>>  gt_masks_per_video',gt_masks_per_video.size(),'targets_per_frame.gt_masks ',targets_per_frame.gt_masks.size())
-                    #print('>>>>>>>>>>> ',f_i,h,w)
                     gt_masks_per_video[:, f_i, :h, :w] = targets_per_frame.gt_masks
 
 
