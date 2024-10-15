@@ -315,7 +315,7 @@ class VideoMaskFormer(nn.Module):
 
 
         B,C,H,W = images.tensor.size()
-        
+        print(B,C,H,W)
         tz=0;
 
         if self.training:
