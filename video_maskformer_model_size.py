@@ -295,7 +295,7 @@ class VideoMaskFormer(nn.Module):
             
             B,C,H,W = rs_images.tensor.size()
             
-            if H*W>=424200:
+            if H*W>=404200:
                 downsampled_images = F.avg_pool2d(F.interpolate(rs_images.tensor.float(), size=(480, 864), mode='bilinear', align_corners=False), kernel_size=4, stride=4, padding=0) #for img in images]
                 
             else:
@@ -319,7 +319,7 @@ class VideoMaskFormer(nn.Module):
         tz=0;
 
         if self.training:
-            if H*W>=424200:
+            if H*W>=404200:
                 features = self.backbone(F.interpolate(images.tensor, size=(480, 864), mode='bilinear', align_corners=False))
                 H=480;W=864
                 tz = 1;
