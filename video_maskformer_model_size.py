@@ -343,7 +343,7 @@ class VideoMaskFormer(nn.Module):
            
             if not is_coco:
                 # bipartite matching-based loss
-                losses = self.criterion(outputs, targets, images_lab_sim, images_lab_sim_nei, images_lab_sim_nei1, images_lab_sim_nei2,images)
+                losses = self.criterion(outputs, targets, images_lab_sim, images_lab_sim_nei, images_lab_sim_nei1, images_lab_sim_nei2)
                 
                 
             else:
