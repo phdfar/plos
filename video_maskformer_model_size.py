@@ -347,7 +347,7 @@ class VideoMaskFormer(nn.Module):
                 
                 
             else:
-                losses = self.criterion(outputs, targets, None, None, None, None,None)
+                losses = self.criterion(outputs, targets, None, None, None, None)
 
             ############################## QCC ##############################
             KK=[];
