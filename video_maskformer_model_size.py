@@ -182,12 +182,12 @@ class VideoMaskFormer(nn.Module):
         
         #self.QCC = qcc.QCC()
         
-        with open('alpha_beta.txt','r') as f:
-            ab = eval(str(f.read()).replace('\n',''))
-            self.alpha = ab['alpha'];
-            self.beta = ab['beta'];
+        #with open('alpha_beta.txt','r') as f:
+            #ab = eval(str(f.read()).replace('\n',''))
+            #self.alpha = ab['alpha'];
+            #self.beta = ab['beta'];
         
-        print('alpha,beta',self.alpha,self.beta)
+        #print('alpha,beta',self.alpha,self.beta)
         
         
     @classmethod
