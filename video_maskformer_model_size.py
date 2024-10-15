@@ -357,13 +357,13 @@ class VideoMaskFormer(nn.Module):
             #if self.alpha>=1:
                 #qccv =self.QCC(outputs['pred_masks'],KK)
                 #print('qccv',qccv)
-
+            
             for k in list(losses.keys()):
                 if k in self.criterion.weight_dict:
-                    if self.alpha>=1:
-                        losses[k] *= self.criterion.weight_dict[k]# * (1.0*qccv)
-                    else:
-                        losses[k] *= self.criterion.weight_dict[k]
+                    #if self.alpha>=1:
+                    #    losses[k] *= self.criterion.weight_dict[k]# * (1.0*qccv)
+                    #else:
+                    losses[k] *= self.criterion.weight_dict[k]
                 else:
                     losses.pop(k)
             return losses
